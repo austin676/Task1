@@ -40,9 +40,7 @@ The following were intentionally excluded to preserve conceptual clarity:
 - Conflict resolution logic  
 - Automatic recovery or self-healing  
 - Data replication  
-- Leader election  
-- Network discovery  
-- Business rule enforcement  
+- Leader Election 
 - Adaptive or intelligent behavior  
 
 The node remains deliberately limited.
