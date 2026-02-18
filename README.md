@@ -1,216 +1,285 @@
-# Minimal Ledger Node – Conceptual Model
+# Minimal Ledger Node  
+## Concept Document
 
 ---
 
-## Overview
+# 1. Purpose of This Document
 
-This repository presents a conceptual model of a **minimal ledger node**.
+This document defines the conceptual model of a minimal ledger node.
 
-The objective of this model is to clearly define:
+It explains:
 
-- What a ledger node is responsible for  
-- What it is explicitly *not* responsible for  
-- How it behaves across lifecycle stages  
-- How it responds deterministically to failure  
+- What a ledger node is
+- What it is responsible for
+- What it must never do
+- How it behaves across lifecycle stages
+- How it responds to failure
 
-This is not a production implementation.  
-It is a boundary-focused infrastructure model.
+This document intentionally avoids protocol design, networking models, or economic mechanisms.
 
-Clarity and restraint were prioritized over feature richness.
-
----
-
-## Definition
-
-A ledger node is a software process that:
-
-- Validates the structural correctness of entries  
-- Appends entries in strict order  
-- Preserves stored data integrity  
-- Exposes read-only access to recorded data  
-- Reports its operational state  
-
-It does not interpret, coordinate, or decide.
+The focus is responsibility boundaries and deterministic behavior.
 
 ---
 
-## Core Responsibilities
+# 2. Definition of a Ledger Node
 
-### 1. Structural Validation
+A ledger node is a software process responsible for maintaining an ordered, append-only record of structured entries.
 
-The node checks that each entry contains required fields and follows a predefined format.
+It performs four primary functions:
 
-It does not evaluate meaning or business logic.
+1. Validate structural correctness of entries  
+2. Append entries in strict order  
+3. Preserve stored data integrity  
+4. Expose recorded data for inspection  
+
+It does not interpret meaning, enforce policy, or coordinate with other nodes.
 
 ---
 
-### 2. Ordered Append-Only Storage
+# 3. Core Responsibilities
+
+## 3.1 Structural Validation
+
+The node verifies that incoming entries meet predefined structural requirements.
+
+Validation ensures:
+- Required fields exist
+- Entry format is correct
+- Data structure is complete
+
+The node does not evaluate business logic or semantic correctness.
+
+---
+
+## 3.2 Ordered Append-Only Recording
 
 Entries are appended sequentially.
 
 The node:
+- Never rewrites historical entries
+- Never reorders past data
+- Never inserts entries into prior positions
 
-- Never rewrites history  
-- Never reorders past entries  
-- Never inserts into previous positions  
-
-Order preservation is mandatory.
-
----
-
-### 3. Data Integrity Protection
-
-The node ensures stored data remains unchanged.
-
-If corruption is detected:
-
-- Operation halts  
-- The node enters a safe failure state  
-- Manual recovery is required  
-
-Automatic repair is intentionally excluded.
+Order preservation ensures auditability.
 
 ---
 
-### 4. Read-Only Exposure
+## 3.3 Data Integrity Protection
 
-The node allows inspection of stored entries and operational status.
+The node protects stored data from unauthorized modification.
 
-It does not:
+It must:
+- Detect corruption
+- Refuse unsafe operations
+- Halt when integrity cannot be guaranteed
 
-- Interpret results  
-- Enforce policies  
-- Perform business decisions  
-
----
-
-## Lifecycle Model
-
-The node operates in defined states.
-
-### Start
-
-- Verify storage availability  
-- Verify data integrity  
-- Transition to operating state  
-
-If verification fails, the node refuses to start.
+It must not automatically repair corrupted data.
 
 ---
 
-### Operate
+## 3.4 Read-Only Exposure
 
-- Accept valid entries  
-- Append in order  
-- Expose read access  
-- Report health  
+The node exposes:
+- Stored entries
+- Integrity verification capability
+- Operational state
+
+It does not execute decisions or apply business rules.
 
 ---
 
-### Degrade
+# 4. Lifecycle Model
 
-Triggered by partial failure (e.g., storage slow or delayed inputs).
+The ledger node operates through defined lifecycle stages.
+
+---
+
+## 4.1 Start
+
+During startup, the node:
+
+- Verifies storage availability
+- Performs integrity checks
+- Confirms configuration validity
+
+If verification fails, the node refuses to operate.
+
+Startup prioritizes correctness over availability.
+
+---
+
+## 4.2 Operate
+
+In normal operation, the node:
+
+- Accepts structurally valid entries
+- Appends entries in strict order
+- Exposes read-only access
+- Reports health status
+
+This is the steady-state condition.
+
+---
+
+## 4.3 Degrade
+
+Degraded mode occurs during partial failure conditions such as:
+
+- Slow or unstable storage
+- Delayed input streams
+- Resource exhaustion
 
 In degraded mode:
 
-- Unsafe writes are refused  
-- Read access continues if safe  
-- Clear error status is exposed  
+- Unsafe writes are rejected
+- Read access continues if safe
+- Health status clearly reflects limitations
 
-Correctness is prioritized over availability.
-
----
-
-### Shutdown
-
-- Stop accepting new entries  
-- Flush pending writes  
-- Transition to stopped state  
+The node reduces capability rather than risking corruption.
 
 ---
 
-## Failure Boundaries
+## 4.4 Shutdown
 
-Deterministic responses are defined for specific failure types.
+During shutdown:
 
-### Storage Unavailable
+- New writes are rejected
+- Pending writes are flushed
+- Storage is closed safely
 
-- Reject new writes  
-- Enter degraded or halted state  
-- Expose clear error  
-
----
-
-### Delayed Inputs
-
-- Accept within capacity limits  
-- Reject when limits exceeded  
-- Preserve strict order  
+The node transitions to a stopped state.
 
 ---
 
-### Corrupted Data
+# 5. Failure Boundaries
 
-- Halt operation immediately  
-- Mark state unsafe  
-- Require manual recovery  
+Failure responses must be deterministic.
 
-No automatic repair.
+The same failure must always produce the same reaction.
 
 ---
 
-## What This Model Explains
+## 5.1 Storage Unavailable
 
-This model demonstrates:
+Response:
 
-- Responsibility boundaries  
-- Deterministic behavior  
-- Failure containment  
-- Integrity-first design  
-- Minimal authority  
+- Stop accepting writes
+- Enter degraded or halted state
+- Expose clear error condition
 
-It shows how infrastructure can remain predictable and auditable.
+No unsafe buffering or retry loops are performed.
 
 ---
 
-## What This Model Intentionally Ignores
+## 5.2 Delayed Inputs
 
-The following areas are outside the scope of this model:
+Response:
 
-- Consensus mechanisms  
-- Peer-to-peer communication  
-- Incentive systems  
-- Governance models  
-- Distributed coordination  
-- Performance optimization  
-- Replication strategies  
+- Accept entries within defined capacity
+- Reject entries beyond capacity
+- Preserve strict order
+
+No guessing or reordering occurs.
 
 ---
 
-## What I Chose NOT To Design
+## 5.3 Corrupted Data
 
-The following were intentionally excluded to preserve conceptual clarity:
+Response:
 
-- Conflict resolution logic  
-- Automatic recovery or self-healing  
-- Data replication  
-- Leader election  
-- Network discovery  
-- Business rule enforcement  
-- Adaptive or intelligent behavior
-  
+- Immediately halt operation
+- Mark ledger state unsafe
+- Require manual recovery
+
+Automatic repair is not allowed.
+
 ---
 
-## Design Philosophy
+# 6. Trust & Transparency Model
 
-When correctness is threatened, reduce capability — do not improvise.
+Trust is built through predictable behavior and limited authority.
 
-The node is:
+## Transparent Elements
 
-- Deterministic  
-- Predictable  
-- Transparent in behavior  
-- Strict in integrity preservation  
-- Minimal in scope  
+- Entry ordering rules
+- Structural validation rules
+- Integrity verification mechanism
+- Operational state
 
+## Protected Elements
 
+- Write interface
+- Internal storage files
+- Configuration parameters
+- Validation logic
+
+Transparency ensures auditability.  
+Protection ensures integrity.
+
+---
+
+# 7. Explicit Non-Responsibilities
+
+This model intentionally excludes:
+
+- Consensus mechanisms
+- Peer-to-peer communication
+- Conflict resolution
+- Governance models
+- Incentive structures
+- Replication strategies
+- Performance optimization
+- Intelligent or adaptive behavior
+
+These belong to broader system architecture.
+
+---
+
+# 8. Design Philosophy
+
+The guiding principle of this model is:
+
+When correctness is threatened, reduce capability.
+
+The node must be:
+
+- Deterministic
+- Predictable
+- Minimal in authority
+- Strict in integrity preservation
+
+Its reliability comes from disciplined limitation rather than complexity.
+
+---
+
+# 9. Scope Boundaries
+
+This conceptual model addresses:
+
+- Single-node behavior
+- Local storage integrity
+- Deterministic lifecycle transitions
+
+It does not address:
+
+- Distributed guarantees
+- Multi-node coordination
+- Economic or policy frameworks
+
+These concerns are intentionally outside scope.
+
+---
+
+# 10. Conclusion
+
+This conceptual model demonstrates that a ledger node's value lies in:
+
+- Structural validation
+- Ordered recording
+- Integrity preservation
+- Controlled exposure
+
+It records.  
+It verifies structure.  
+It protects history.  
+It exposes state.
