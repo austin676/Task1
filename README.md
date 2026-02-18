@@ -1,5 +1,4 @@
 # Minimal Ledger Node  
-## Concept Document
 
 ---
 
