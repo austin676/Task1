@@ -1,108 +1,207 @@
-Minimal Ledger Node – Conceptual Model
-Overview
+# Minimal Ledger Node  
+## Concept Document
 
-This repository presents a conceptual model of a minimal ledger node.
+---
 
-The goal is to define:
+# 1. Purpose of This Document
 
-What a ledger node is responsible for
+This document defines the conceptual model of a minimal ledger node.
 
-How it behaves across lifecycle stages
+It explains:
 
-How it handles failure deterministically
+- What a ledger node is
+- What it is responsible for
+- What it must never do
+- How it behaves across lifecycle stages
+- How it responds to failure
 
-What it must explicitly never do
+This document intentionally avoids protocol design, networking models, or economic mechanisms.
 
-This model focuses on clarity, boundaries, and predictable behavior.
+The focus is responsibility boundaries and deterministic behavior.
 
-It intentionally avoids protocol design, economics, and distributed coordination.
+---
 
-What This Model Explains
+# 2. Definition of a Ledger Node
 
-This model explains:
+A ledger node is a software process responsible for maintaining an ordered, append-only record of structured entries.
 
-1. Node Responsibilities
+It performs four primary functions:
 
-Validate structural correctness of entries
+1. Validate structural correctness of entries  
+2. Append entries in strict order  
+3. Preserve stored data integrity  
+4. Expose recorded data for inspection  
 
-Append entries in strict order
+It does not interpret meaning, enforce policy, or coordinate with other nodes.
 
-Protect stored data from modification
+---
 
-Expose read-only access
+# 3. Core Responsibilities
 
-Report operational state
+## 3.1 Structural Validation
 
-2. Lifecycle Stages
+The node verifies that incoming entries meet predefined structural requirements.
 
-Start (verification before operation)
+Validation ensures:
+- Required fields exist
+- Entry format is correct
+- Data structure is complete
 
-Operate (normal recording state)
+The node does not evaluate business logic or semantic correctness.
 
-Degrade (restricted functionality under partial failure)
+---
 
-Shutdown (clean termination)
+## 3.2 Ordered Append-Only Recording
 
-3. Failure Boundaries
+Entries are appended sequentially.
 
-Defined deterministic responses for:
+The node:
+- Never rewrites historical entries
+- Never reorders past data
+- Never inserts entries into prior positions
 
-Storage unavailability
+Order preservation ensures auditability.
 
-Delayed inputs
+---
 
-Corrupted data
+## 3.3 Data Integrity Protection
 
-When correctness is threatened, the node reduces capability rather than improvising.
+The node protects stored data from unauthorized modification.
 
-What This Model Intentionally Ignores
+It must:
+- Detect corruption
+- Refuse unsafe operations
+- Halt when integrity cannot be guaranteed
 
-This model does not design:
+It must not automatically repair corrupted data.
 
-Consensus mechanisms
+---
 
-Peer-to-peer networking
+## 3.4 Read-Only Exposure
 
-Incentive systems
+The node exposes:
+- Stored entries
+- Integrity verification capability
+- Operational state
 
-Governance rules
+It does not execute decisions or apply business rules.
 
-Performance optimization strategies
+---
 
-Conflict resolution
+# 4. Lifecycle Model
 
-These concerns belong to higher-level system design and are outside the scope of a minimal ledger node.
+The ledger node operates through defined lifecycle stages.
 
-What I Chose NOT To Design
+---
 
-The following were intentionally excluded to preserve clarity and scope:
+## 4.1 Start
 
-Distributed coordination between nodes
+During startup, the node:
 
-Automatic recovery or self-healing mechanisms
+- Verifies storage availability
+- Performs integrity checks
+- Confirms configuration validity
 
-Data replication strategies
+If verification fails, the node refuses to operate.
 
-Economic validation or transaction rules
+Startup prioritizes correctness over availability.
 
-Intelligent error correction
+---
 
-Retry strategies or buffering beyond minimal safety
+## 4.2 Operate
 
-This was intentional.
+In normal operation, the node:
 
-A ledger node is defined by disciplined limitations, not extended capability.
+- Accepts structurally valid entries
+- Appends entries in strict order
+- Exposes read-only access
+- Reports health status
 
-Design Philosophy
+This is the steady-state condition.
 
-The node is designed to be:
+---
 
-Deterministic
+## 4.3 Degrade
 
-Predictable
+Degraded mode occurs during partial failure conditions such as:
 
-Transparent in behavior
+- Slow or unstable storage
+- Delayed input streams
+- Resource exhaustion
 
-Strict in data integrity
+In degraded mode:
 
-Minimal in authority
+- Unsafe writes are rejected
+- Read access continues if safe
+- Health status clearly reflects limitations
+
+The node reduces capability rather than risking corruption.
+
+---
+
+## 4.4 Shutdown
+
+During shutdown:
+
+- New writes are rejected
+- Pending writes are flushed
+- Storage is closed safely
+
+The node transitions to a stopped state.
+
+---
+
+# 5. Failure Boundaries
+
+Failure responses must be deterministic.
+
+The same failure must always produce the same reaction.
+
+---
+
+## 5.1 Storage Unavailable
+
+Response:
+
+- Stop accepting writes
+- Enter degraded or halted state
+- Expose clear error condition
+
+No unsafe buffering or retry loops are performed.
+
+---
+
+## 5.2 Delayed Inputs
+
+Response:
+
+- Accept entries within defined capacity
+- Reject entries beyond capacity
+- Preserve strict order
+
+No guessing or reordering occurs.
+
+---
+
+## 5.3 Corrupted Data
+
+Response:
+
+- Immediately halt operation
+- Mark ledger state unsafe
+- Require manual recovery
+
+Automatic repair is not allowed.
+
+---
+
+# 6. Trust & Transparency Model
+
+Trust is built through predictable behavior and limited authority.
+
+## Transparent Elements
+
+- Entry ordering rules
+- Structural validation rules
+- Integrity verification mechanism
+- Operational state
